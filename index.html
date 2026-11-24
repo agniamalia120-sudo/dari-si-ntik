@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Mini Games for You</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;overflow:hidden;background:#6ab8ff;color:#fff;
+    font-family:'Press Start 2P',monospace;-webkit-user-select:none;user-select:none;
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  #stage{position:fixed;inset:0;width:100%;height:100%;display:block;image-rendering:pixelated;z-index:0}
+  #stage.shake{animation:shake .35s}
+  @keyframes shake{20%{transform:translate(-6px,2px)}40%{transform:translate(6px,-2px)}60%{transform:translate(-4px,2px)}80%{transform:translate(4px,0)}}
+
+  .screen{position:fixed;inset:0;z-index:5;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+  .screen.active{display:flex}
+  .overlay{background:rgba(14,20,52,.38)}
+
+  /* START */
+  .titles{position:absolute;top:12vh;left:0;right:0}
+  .presents{font-size:clamp(7px,1.2vw,11px);color:#2d2a6e;letter-spacing:.12em}
+  .care{font-size:min(15vw,20vh);line-height:1;margin-top:.5em;color:#ffd23a;
+    text-shadow:-.1em 0 #e8651b,.1em 0 #e8651b,0 -.1em #e8651b,0 .1em #e8651b,
+      -.1em -.1em #e8651b,.1em -.1em #e8651b,-.1em .1em #e8651b,.1em .1em #e8651b,
+      .2em .2em 0 #9c3a12}
+  .with{font-size:min(5vw,6vh);margin:.4em 0 .2em;color:#141414;text-shadow:.06em .06em 0 #fff}
+  .con{font-size:min(8vw,11vh);line-height:1.1}
+  .c1{color:#2d2a6e;text-shadow:.08em .08em 0 #15143d}
+  .c2{color:#3f8fe3;text-shadow:.08em .08em 0 #1f3f78}
+  .expedition{font-size:clamp(6px,1.25vw,11px);color:#2d2a6e;letter-spacing:.08em;margin-top:1.6em}
+  .start-area{position:absolute;top:68vh;left:50%;transform:translateX(-50%)}
+  .start-area .cursor{position:absolute;right:-26px;bottom:-24px;width:22px;height:30px}
+  .hud-right{position:absolute;top:3vh;right:3vw;display:flex;gap:.6em}
+  .orb{width:clamp(26px,3.6vw,38px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:10px;color:#fff;
+    background:radial-gradient(circle at 35% 30%,#e7ffd0,#8fe26a 45%,#3f9e2e);box-shadow:0 0 0 3px #2b6b22}
+
+  /* BUTTONS */
+  .btn{font-family:inherit;font-size:clamp(12px,2.2vh,18px);color:#fff;border:0;padding:.95em 1.8em;cursor:pointer;
+    text-decoration:none;display:inline-block;letter-spacing:.04em;text-shadow:2px 2px 0 rgba(0,0,0,.35);transition:transform .06s}
+  .btn:active{transform:translateY(3px)}
+  .btn-green{background:#7ed957;box-shadow:inset 0 -6px 0 #3f9e2e,inset 0 5px 0 #c9f7a6,0 0 0 4px #2b5e1f}
+  .btn-red{background:#f0585a;box-shadow:inset 0 -6px 0 #a8262a,inset 0 5px 0 #ffb0a8,0 0 0 4px #5e1517}
+  .btn-blue{background:#4fa3f0;box-shadow:inset 0 -6px 0 #2164b0,inset 0 5px 0 #b8e0ff,0 0 0 4px #17406e}
+
+  /* GAME */
+  #screen-game{justify-content:flex-end;padding-bottom:5vh;pointer-events:none}
+  .hint{font-size:clamp(8px,1.4vw,12px);text-shadow:2px 2px 0 #2d2a6e;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:.3}}
+
+  /* LOSE / YAY */
+  .you-lose{font-size:clamp(26px,6.4vw,64px);line-height:1.2;color:#ff4f4f;
+    text-shadow:-4px 0 #fff,4px 0 #fff,0 -4px #fff,0 4px #fff,6px 6px 0 #7a0f14}
+  .question{font-size:clamp(10px,2vw,18px);line-height:1.8;margin:28px 0 36px;text-shadow:2px 2px 0 #2d2a6e}
+  .choices{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(16px,3vw,36px)}
+  .bubble{position:relative;background:#fff;color:#2d2a6e;padding:14px 20px;margin-bottom:28px;
+    font-size:clamp(10px,1.9vw,16px);border:4px solid #2d2a6e;box-shadow:4px 4px 0 #2d2a6e}
+  .bubble::after{content:"";position:absolute;left:50%;bottom:-16px;transform:translateX(-50%);
+    border:8px solid transparent;border-top:8px solid #2d2a6e}
+  .yay-msg{font-size:clamp(9px,1.8vw,15px);line-height:2;max-width:720px;margin-bottom:36px;text-shadow:2px 2px 0 #2d2a6e}
+
+  /* NAY */
+  .dark{position:fixed;inset:0;z-index:50;background:#000;opacity:0;visibility:hidden;transition:opacity 1.5s ease}
+  .dark.on{opacity:1;visibility:visible}
+  #screen-nay{z-index:60;background:transparent}
+  .nay-msg{font-size:clamp(9px,1.8vw,15px);line-height:2;max-width:720px;margin-bottom:36px;color:#fff;text-shadow:2px 2px 0 #2d2a6e}
+  #screen-yay,#screen-nay{overflow-y:auto;justify-content:safe center}
+  .yay-msg,.nay-msg{font-size:clamp(8px,1.4vw,12px);line-height:2;text-align:left}
+  .nay-title{font-size:clamp(12px,2.6vw,22px);line-height:1.6;margin-bottom:24px;color:#fff;text-shadow:2px 2px 0 #2d2a6e}
+  .call-hint{font-size:clamp(9px,1.6vw,13px);line-height:1.8;margin-bottom:24px;color:#fff;text-shadow:2px 2px 0 #2d2a6e}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<!-- 1. START -->
+<section id="screen-start" class="screen active">
+  <div class="hud-right"><span class="orb">♪</span><span class="orb">≡</span><span class="orb">II</span></div>
+  <div class="titles">
+    <p class="presents">[ DARI SI NTIK ]</p>
+    <h1 class="care">MINI</h1>
+    <p class="with">games</p>
+    <h2 class="con"><span class="c1">FOR</span> <span class="c2">YOU</span></h2>
+    <p class="expedition">[ LET'S PLAY THE GAME! ]</p>
+  </div>
+  <div class="start-area">
+    <button id="startBtn" class="btn btn-green">START</button>
+    <svg class="cursor" viewBox="0 0 12 16"><polygon points="0,0 0,12 3,9 5.5,15 8,14 5.5,8.5 10,8.5" fill="#fff" stroke="#111" stroke-width=".8"/></svg>
+  </div>
+</section>
+
+<!-- 2. GAME -->
+<section id="screen-game" class="screen"><p class="hint">TAP / SPACE TO JUMP</p></section>
+
+<!-- 3. LOSE + PERTANYAAN -->
+<section id="screen-lose" class="screen overlay">
+  <h2 class="you-lose">OH NO, YOU LOSE T_T</h2>
+  <p class="question">Do you already love someone else?</p>
+  <div class="choices">
+    <button id="yayBtn" class="btn btn-green">YAY</button>
+    <button id="nayBtn" class="btn btn-red">NAY</button>
+  </div>
+</section>
+
+<!-- 4. YAY -->
+<section id="screen-yay" class="screen overlay">
+  <div class="bubble">Please read this</div>
+  <p class="yay-msg">halooo, good night. ini dari si ntik imup lucu gemas ya, gimana harinya tadi? ada yang menyenangkan tida? semoga aja hari nya menyenangkan ya, kalo tida juga tidapapa kan masi ada hari besok :3 oiya makasi ya suda luangin waktunya buat buka pesan aku, dan maaf yaa menganggu waktu nya, maaf juga aku suda lancang tiba tiba chat kamu kaya gini, sebelumnya aku minta maaf aku suda suka sama kamu tanpa kamu tau ehehehe &gt;_💧 aku engga tau rasa ini tiba tiba muncul begitu saja T_T. sebener nya aku gengsi buat bilang ini sama kamu, tapi kali ini aku turunin dulu rasa gengsi aku ahahaha, langsung intinya aja deh " i have crush on you" asshssjs I very shy tell this. aku suka sama hal hal yang ada di diri kamu like tingkah kamu, sikap kamu, senyum kamu, kamu keren josjis rawon, vibes kamu, semuanya akubsuka, kamu tau ga? selain kamu ganteng, kamu juga lucu nan gemas ahahaha sampe suka aku juga liatnya, masi banyak lagi deh hal yang membuat aku suka sama kamu, dan sekarang aku seneng banget suda bisa confess sama kamu. tolongg bilang ke aku kalo semisalnya kamu udah love someone else apa belum because kalo belum AKU BAKAL MAJU PALING DEPAN! but if already love someone else, I just hope that you're happy with your choice. Tell me if you not in love with someone else, I'll here always waiting you, I'm here if you want have someone to talk and I'll always listen. oiya sebelumnya terimakasi ya sudaa mau baca ini semua sampai akhir, kalo ada kata kata aku yang ga lagu enak atau membuat kamu risih, aku minta maaf yaa. yeahh sekali lagi i like you, nteng🩷</p>
+  <p class="call-hint">answer this please</p>
+  <!-- ganti USERNAME_KAMU dengan username Telegram tujuan -->
+  <a class="btn btn-blue" href="http://AnoMessBot.t.me?start=MPfFWkm" target="_blank" rel="noopener">CALL ME</a>
+</section>
+
+<!-- 5. NAY: layar gelap -->
+<div id="dark" class="dark"></div>
+
+<!-- 6. NAY: pesan pertemanan + CALL ME -->
+<section id="screen-nay" class="screen">
+  <h2 class="nay-title">it's okay, I'll accept it..</h2>
+  <p class="nay-msg">I'll keep watch and I'll waiting. Just if you need someone to talk, just tell me okay? don't feel alone, I'm here always. I hope you happy with your choice yaa, I love you nteng💜</p>
+  <p class="call-hint">klik this for answer me</p>
+  <!-- ganti USERNAME_KAMU dengan username Telegram tujuan -->
+  <a class="btn btn-blue" href="http://AnoMessBot.t.me?start=MPfFWkm" target="_blank" rel="noopener">CALL ME</a>
+</section>
+
+<script>
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+let P, LW, LH, GY, frame = 0;
+const GRAV = 0.3, JUMP = -4.8;
+
+function resize(){
+  const W = innerWidth, H = innerHeight;
+  P = Math.max(2, Math.floor(Math.min(W, H) / 170));
+  LW = Math.round(W / P);
+  LH = Math.round(H / P);
+  canvas.width = LW;
+  canvas.height = LH;
+  GY = Math.round(LH * 0.92);
+}
+addEventListener('resize', resize);
+resize();
+
+/* ---------- SPRITES (pixel art dari grid karakter) ---------- */
+const SPR = {
+  mario: { map:{R:'#e52521',S:'#fcc9a0',H:'#6b3a1e',E:'#1a1a1a',M:'#6b3a1e',B:'#2456c8',Y:'#ffd23f',K:'#4a2310'},
+    rows:["...RRRRR...","..RRRRRRRR.","..HHHSSS...",".HSSESSSS..",".HSSSSSSS..","..SMMMSS...","...SSSSS...","..RRRRRRR..",".RRRRRRRRR.","..BBYBBYB..","..BBBBBBB..","..BBBBBBB..","..BB...BB..",".KKKK.KKKK."] },
+  goomba: { map:{G:'#9b5a2a',E:'#1a1a1a',T:'#f2c48d',K:'#3b1f0c'},
+    rows:["...GGGGG...","..GGGGGGG..",".GGEGGGEGG.",".GGGGGGGGG.","..TTTTTTT..",".KKKK.KKKK."] },
+  heart: { map:{'#':'#ff4f7f',h:'#ffc2d6'}, rows:[".##.##.","#h#####","#######",".#####.","..###..","...#..."] },
+  gem: { map:{b:'#4fc3ff',h:'#d8f3ff'}, rows:["..b..",".bhb.","bhbbb",".bbb.","..b.."] },
+  cloud: { map:{'#':'#ffffff','@':'#c4e4ff'}, rows:["....######....","..##########..",".############.","##############","@@@@@@@@@@@@@@"] },
+  bird: { map:{B:'#34367e'}, rows:["B...B",".B.B.","..B.."] },
+  birdDown: { map:{B:'#34367e'}, rows:["..B..",".B.B.","B...B"] },
+  pill: { map:{L:'#4aa8ff',W:'#ffffff'}, rows:["..LLLLWWWW..",".LLLLLWWWWW.",".LLLLLWWWWW.","..LLLLWWWW.."] },
+  spark: { map:{y:'#ffe27a'}, rows:["..y..","..y..","yyyyy","..y..","..y.."] },
+};
+
+function px(x, y, w, h, c){
+  ctx.fillStyle = c;
+  ctx.fillRect(Math.round(x), Math.round(y), w, h);
+}
+function spriteAt(name, x, y, s = 1, angle = 0){
+  const sp = SPR[name], rows = sp.rows, w = rows[0].length, h = rows.length;
+  ctx.save();
+  if (angle){
+    ctx.translate(x + w * s / 2, y + h * s / 2);
+    ctx.rotate(angle);
+    x = -w * s / 2; y = -h * s / 2;
+  }
+  for (let r = 0; r < h; r++)
+    for (let c = 0; c < w; c++){
+      const col = sp.map[rows[r][c]];
+      if (!col) continue;
+      ctx.fillStyle = col;
+      ctx.fillRect(Math.round(x + c * s), Math.round(y + r * s), s, s);
+    }
+  ctx.restore();
+}
+
+/* ---------- SCENE ---------- */
+const MX = () => Math.round(LW * 0.2);
+
+const WALLS = ['#f4e7cc','#eed7a8','#f7d9c6','#d4e7f4','#e9e2d0'];
+const ROOFS = ['#5b4b74','#8a4b2e','#3d6b8c','#6b5a44','#7a3b3b'];
+const CITY_PERIOD = 460;
+const city = (() => {
+  let s = 2024;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const items = [];
+  let x = 0;
+  while (x < CITY_PERIOD - 70){
+    const k = rnd();
+    if (k < 0.5){
+      const w = 34 + Math.floor(rnd() * 14);
+      items.push({ t:'house', x, w, f: 0.14 + rnd() * 0.1,
+        wall: WALLS[Math.floor(rnd() * WALLS.length)],
+        roof: ROOFS[Math.floor(rnd() * ROOFS.length)] });
+      x += w + 6 + Math.floor(rnd() * 8);
+    } else if (k < 0.8){
+      items.push({ t:'tree', x });
+      x += 22 + Math.floor(rnd() * 10);
+    } else {
+      items.push({ t:'kid', x, c: rnd() < 0.5 ? '#e4574e' : '#3f8fe3' });
+      x += 14;
+    }
+  }
+  return items;
+})();
+
+const BIRDS = [
+  { fx:0.10, fy:0.17, sp:0.10, n:0 },
+  { fx:0.92, fy:0.22, sp:0.08, n:2 },
+  { fx:0.20, fy:0.34, sp:0.12, n:4 },
+];
+const CLOUDS = [
+  { fx:0.05, fy:0.06, sp:0.05 },
+  { fx:0.45, fy:0.12, sp:0.035 },
+  { fx:0.78, fy:0.04, sp:0.06 },
+  { fx:0.62, fy:0.28, sp:0.03 },
+];
+const DECOR = [
+  { n:'heart', fx:0.13, fy:0.13, a:0 },
+  { n:'heart', fx:0.45, fy:0.15, a:0 },
+  { n:'heart', fx:0.85, fy:0.40, a:0 },
+  { n:'pill', fx:0.26, fy:0.42, a:-0.45 },
+  { n:'pill', fx:0.70, fy:0.40, a:0.5 },
+  { n:'spark', fx:0.19, fy:0.25, a:0 },
+  { n:'spark', fx:0.62, fy:0.20, a:0 },
+  { n:'spark', fx:0.92, fy:0.52, a:0 },
+];
+
+function drawSky(){
+  const g = ctx.createLinearGradient(0, 0, 0, LH);
+  g.addColorStop(0, '#3f9cf0');
+  g.addColorStop(0.6, '#7cc4ff');
+  g.addColorStop(1, '#bfe6ff');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, LW, LH);
+}
+function drawClouds(){
+  CLOUDS.forEach(c => {
+    const span = LW + 60;
+    const x = (((c.fx * LW - game.t * c.sp) % span) + span) % span - 30;
+    spriteAt('cloud', x, c.fy * LH, 2);
+  });
+}
+function drawBirds(){
+  BIRDS.forEach((b, i) => {
+    const span = LW + 40;
+    const x = (((b.fx * LW - game.t * b.sp) % span) + span) % span - 20;
+    const y = b.fy * LH + Math.sin(game.t * 0.03 + i) * 1.5;
+    spriteAt(Math.floor(game.t / 8 + i) % 2 ? 'birdDown' : 'bird', x, y, 2);
+  });
+}
+function drawDecor(){
+  DECOR.forEach((d, i) => {
+    const bob = Math.sin(game.t * 0.05 + i) * 1.2;
+    spriteAt(d.n, d.fx * LW, d.fy * LH + bob, 1, d.a);
+  });
+}
+function drawHaze(){
+  for (let x = 0; x < LW; x += 4){
+    const top = Math.round(LH * 0.66 + Math.sin(x * 0.09) * 3 + Math.cos(x * 0.031) * 4);
+    px(x, top, 4, GY - top, '#d9f0ff');
+  }
+}
+function drawHouse(b, x){
+  const h = Math.round(LH * b.f), top = GY - h, w = b.w;
+  px(x - 2, top - 3, w + 4, 3, b.roof);
+  px(x, top, w, h, b.wall);
+  for (let r = 0; top + 4 + r * 11 + 5 < GY - 7; r++)
+    for (let c = 0; c < Math.floor((w - 8) / 10); c++){
+      const wx = x + 4 + c * 10, wy = top + 4 + r * 11;
+      px(wx, wy, 5, 5, '#3c3a70');
+      px(wx, wy, 2, 2, '#a8dcff');
+    }
+  px(x + Math.floor(w / 2) - 2, GY - 6, 5, 6, '#7a4421');
+}
+function drawTree(x){
+  px(x + 4, GY - 8, 3, 8, '#7a4a22');
+  px(x + 1, GY - 17, 9, 10, '#3fae4a');
+  px(x + 3, GY - 21, 5, 4, '#3fae4a');
+  px(x + 2, GY - 15, 2, 2, '#7bdc6a');
+}
+function drawKid(x, c){
+  px(x + 1, GY - 10, 3, 1, '#4a2a14');
+  px(x + 1, GY - 9, 3, 3, '#fcc9a0');
+  px(x, GY - 6, 5, 4, c);
+  px(x, GY - 2, 2, 2, '#333a55');
+  px(x + 3, GY - 2, 2, 2, '#333a55');
+}
+function drawCity(){
+  const off = game.scroll % CITY_PERIOD;
+  for (let base = -CITY_PERIOD; base < LW + CITY_PERIOD; base += CITY_PERIOD)
+    for (const it of city){
+      const x = Math.round(base + it.x - off);
+      if (x < -60 || x > LW + 10) continue;
+      if (it.t === 'house') drawHouse(it, x);
+      else if (it.t === 'tree') drawTree(x);
+      else drawKid(x, it.c);
+    }
+}
+function drawGround(){
+  px(0, GY, LW, 3, '#6fd34f');
+  for (let x = 0; x < LW; x += 7) px(x, GY - 1, 2, 1, '#8ee86a');
+  px(0, GY + 3, LW, LH - GY - 3, '#b9642e');
+  for (let y = GY + 5; y < LH; y += 4)
+    for (let x = (y >> 2 & 1) * 5; x < LW; x += 10) px(x, y, 5, 1, '#9c4a22');
+}
+
+/* ---------- GAME ---------- */
+const game = {
+  state: 'start', t: 0, scroll: 0, speed: 1.4, score: 0,
+  obstacles: [], nextSpawn: 0, parts: [],
+  mario: { y: 0, vy: 0, onGround: true }
+};
+
+function drawObstacle(o){
+  if (o.t === 'goomba'){ spriteAt('goomba', o.x, GY - 6); return; }
+  const top = GY - o.h;
+  px(o.x - 1, top, 14, 5, '#44d262');
+  px(o.x, top + 5, 12, o.h - 5, '#2fb84a');
+  px(o.x + 2, top + 5, 2, o.h - 5, '#9af0a6');
+  px(o.x - 1, top, 14, 1, '#1d7a33');
+}
+function spawn(){
+  if (Math.random() < 0.6)
+    game.obstacles.push({ t:'pipe', x: LW + 2, w: 12, h: 14 + Math.floor(Math.random() * 12), passed: false });
+  else
+    game.obstacles.push({ t:'goomba', x: LW + 2, w: 11, h: 6, passed: false });
+}
+function hit(o){
+  const m = game.mario, mx = MX();
+  return (mx + 9) > o.x && (mx + 2) < o.x + o.w && (m.y + 14) > GY - o.h && (m.y + 1) < GY;
+}
+function stepMario(dt){
+  const m = game.mario;
+  m.vy += GRAV * dt;
+  m.y += m.vy * dt;
+  if (m.y >= GY - 14){ m.y = GY - 14; m.vy = 0; m.onGround = true; }
+  else m.onGround = false;
+}
+function resetGame(){
+  game.score = 0; game.speed = 1.4; game.obstacles = []; game.parts = [];
+  game.nextSpawn = LW * 0.6;
+  Object.assign(game.mario, { y: GY - 14, vy: 0, onGround: true });
+}
+function gameOver(){
+  game.state = 'lose';
+  canvas.classList.remove('shake'); void canvas.offsetWidth; canvas.classList.add('shake');
+  setTimeout(() => show('screen-lose'), 450);
+}
+
+function update(dt){
+  const g = game, m = g.mario;
+  g.t += dt;
+  if (g.state === 'start') g.scroll += 0.3 * dt;
+
+  if (g.state === 'play'){
+    g.speed = Math.min(3.2, 1.4 + g.score * 0.05);
+    g.scroll += g.speed * dt;
+    g.nextSpawn -= g.speed * dt;
+    if (g.nextSpawn <= 0){ spawn(); g.nextSpawn = LW * 0.55 + Math.random() * LW * 0.35; }
+    g.obstacles.forEach(o => o.x -= g.speed * dt);
+    g.obstacles = g.obstacles.filter(o => o.x > -30);
+    for (const o of g.obstacles){
+      if (!o.passed && o.x + o.w < MX()){ o.passed = true; g.score++; }
+      if (hit(o)){ gameOver(); break; }
+    }
+    stepMario(dt);
+  }
+  if (g.state === 'lose') stepMario(dt);
+  if (g.state === 'yay'){
+    g.scroll += 0.4 * dt;
+    stepMario(dt);
+    if (m.onGround && frame % 50 === 0) m.vy = JUMP * 0.85;
+    if (frame % 12 === 0) g.parts.push({ n: Math.random() < 0.7 ? 'heart' : 'spark',
+      x: Math.random() * LW, y: LH + 8, vy: -(0.25 + Math.random() * 0.35) });
+    g.parts.forEach(p => p.y += p.vy * dt);
+    g.parts = g.parts.filter(p => p.y > -12);
+  }
+}
+
+function drawParts(){
+  ctx.globalAlpha = 0.9;
+  game.parts.forEach(p => spriteAt(p.n, p.x, p.y));
+  ctx.globalAlpha = 1;
+}
+function drawHUD(){
+  for (let i = 0; i < 4; i++) spriteAt('heart', 3 + i * 9, 3);
+  for (let i = 0; i < 4; i++) spriteAt('gem', 3 + i * 7, 13);
+  if (game.state !== 'start'){
+    ctx.fillStyle = '#fff';
+    ctx.font = "6px 'Press Start 2P', monospace";
+    ctx.textBaseline = 'top';
+    ctx.fillText('SCORE ' + String(game.score).padStart(3, '0'), 3, 22);
+  }
+}
+function draw(){
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, LW, LH);
+  drawSky();
+  drawClouds();
+  drawBirds();
+  if (game.state === 'start') drawDecor();
+  drawHaze();
+  drawCity();
+  drawGround();
+  if (game.state === 'play' || game.state === 'lose') game.obstacles.forEach(drawObstacle);
+  if (game.state !== 'start') spriteAt('mario', MX(), game.mario.y);
+  if (game.state === 'yay') drawParts();
+  drawHUD();
+}
+
+let last = performance.now();
+function loop(now){
+  const dt = Math.min(2.5, (now - last) / 16.667);
+  last = now;
+  frame++;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------- AUDIO: musik & efek suara (synth, melodi asli) ---------- */
+let actx = null, master = null, musicTimer = null, trackName = null, nextTime = 0, step = 0;
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+
+const TRACKS = {
+  menu: { bpm: 128, lv: 0.07, bv: 0.12,
+    lead: [76,0,79,0,84,0,79,0, 77,0,76,0,74,0,72,0, 72,0,76,0,81,0,76,0, 74,0,77,0,79,0,74,0],
+    bass: [48,0,48,0,48,0,48,0, 43,0,43,0,43,0,43,0, 45,0,45,0,45,0,45,0, 41,0,41,0,43,0,43,0] },
+  game: { bpm: 168, lv: 0.06, bv: 0.12,
+    lead: [79,79,0,84,0,79,76,0, 77,77,0,81,0,77,74,0, 76,76,0,81,0,76,72,0, 74,74,0,79,0,74,71,0],
+    bass: [36,0,48,0,36,0,48,0, 43,0,55,0,43,0,55,0, 45,0,57,0,45,0,57,0, 43,0,55,0,43,0,55,0] },
+};
+
+function ensureAudio(){
+  if (actx){ if (actx.state === 'suspended') actx.resume(); return; }
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  master = actx.createGain();
+  master.gain.value = 0.35;
+  master.connect(actx.destination);
+}
+function tone(freq, start, dur, type, vol, slide = 0){
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, start);
+  if (slide) o.frequency.linearRampToValueAtTime(freq * slide, start + dur);
+  g.gain.setValueAtTime(vol, start);
+  g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+  o.connect(g).connect(master);
+  o.start(start);
+  o.stop(start + dur + 0.02);
+}
+function scheduleTrack(){
+  const t = TRACKS[trackName], eighth = 60 / t.bpm / 2;
+  while (nextTime < actx.currentTime + 0.12){
+    const i = step % 32, m = t.lead[i], b = t.bass[i];
+    if (m) tone(mtof(m), nextTime, eighth * 0.9, 'square', t.lv);
+    if (b) tone(mtof(b), nextTime, eighth * 0.95, 'triangle', t.bv);
+    nextTime += eighth;
+    step++;
+  }
+}
+function playTrack(name){
+  stopTrack();
+  trackName = name;
+  step = 0;
+  nextTime = actx.currentTime + 0.05;
+  musicTimer = setInterval(scheduleTrack, 25);
+}
+function stopTrack(){
+  clearInterval(musicTimer);
+  musicTimer = null;
+  trackName = null;
+}
+function trackFor(s){
+  return (s === 'start' || s === 'yay') ? 'menu' : (s === 'play' ? 'game' : null);
+}
+
+function sfxClick(){ if (actx) tone(880, actx.currentTime, 0.07, 'square', 0.12, 0.5); }
+function sfxJump(){ if (actx) tone(300, actx.currentTime, 0.22, 'square', 0.12, 3); }
+function seq(notes, gap, type, vol){
+  if (!actx) return;
+  const t0 = actx.currentTime;
+  notes.forEach((m, i) => tone(mtof(m), t0 + i * gap, gap * 1.6, type, vol));
+}
+function sfxLose(){ seq([67,64,60,55], 0.2, 'square', 0.14); }
+function sfxYay(){ seq([72,76,79,84,88], 0.09, 'square', 0.13); }
+function sfxNay(){ seq([67,65,62,58], 0.28, 'triangle', 0.16); }
+
+let prevState = 'start';
+function audioTick(){
+  const s = game.state;
+  if (s !== prevState){
+    if (s === 'lose') sfxLose();
+    if (s === 'yay') sfxYay();
+    if (s === 'nay') sfxNay();
+    prevState = s;
+  }
+  if (actx){
+    const want = trackFor(s);
+    if (want !== trackName){ if (want) playTrack(want); else stopTrack(); }
+  }
+  requestAnimationFrame(audioTick);
+}
+requestAnimationFrame(audioTick);
+
+/* ---------- SCREEN FLOW ---------- */
+function show(id){
+  document.querySelectorAll('.screen').forEach(el => el.classList.toggle('active', el.id === id));
+}
+function startGame(){
+  if (game.state !== 'start') return;
+  resetGame();
+  game.state = 'play';
+  show('screen-game');
+}
+function jump(){
+  const m = game.mario;
+  if (game.state === 'play' && m.onGround){ m.vy = JUMP; m.onGround = false; sfxJump(); }
+}
+function onYay(){ game.state = 'yay'; show('screen-yay'); }
+function onNay(){
+  game.state = 'nay';
+  document.getElementById('dark').classList.add('on');
+  setTimeout(() => show('screen-nay'), 1500);
+}
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('yayBtn').addEventListener('click', onYay);
+document.getElementById('nayBtn').addEventListener('click', onNay);
+addEventListener('pointerdown', jump);
+addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp'){
+    e.preventDefault();
+    if (game.state === 'start') startGame(); else jump();
+  }
+  if (e.code === 'Enter' && game.state === 'start') startGame();
+});
+addEventListener('pointerdown', ensureAudio);
+addEventListener('keydown', ensureAudio);
+document.addEventListener('click', e => { if (e.target.closest('.btn')) sfxClick(); });
+</script>
+</body>
+</html>
